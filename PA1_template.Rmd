@@ -7,19 +7,87 @@ output:
 
 
 ## Loading and preprocessing the data
+```{r}
+unzip("activity.zip")
+data<-read.csv("activity.csv", na.strings="NA", stringsAsFactor=FALSE)
+data$date <- as.Date(strptime(data$date, "%Y-%m-%d"))
 
-
+```
+Here is the data structure:
+```{r echo=TRUE}
+str(data)
+```
+The data now looks like:
+```{r echo=TRUE}
+head(data)
+```
 
 ## What is mean total number of steps taken per day?
+```{r}
+data1<-aggregate(data$steps,by=list(data$date),sum, na.rm=TRUE)
+colnames(data1)<- c("date","steps")
+hist(data1$steps)
+mean(data1$steps, na.rm=TRUE)
+median(data1$steps, na.rm=TRUE)
+
+```
+
 
 
 
 ## What is the average daily activity pattern?
+```{r}
+data2<-aggregate(data$steps,by=list(data$interval),mean, na.rm=TRUE)
+colnames(data2)<- c("interval","steps")
+plot(data2$interval,data2$steps, type="l")
+```
 
-
+```{r}
+data2$interval[which.max(data2$steps)]
+```
 
 ## Imputing missing values
+1. Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r}
+sum(!complete.cases(data))
+```
 
+2. Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+Let's have a look as to where are the missing values:
+```{r}
+data$complete <- complete.cases(data)
+aggregate(data$complete,by=list(data$date),sum, na.rm=TRUE)
+```
+All the missing values are located on specific dates. A give date has either no missing value (288 values), or all values are missing (0). I suggest we use the mean for that specific 5-minute interval across all days.
+
+
+
+
+3. Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+
+```{r}
+library(dplyr)
+data5<-merge(data, data2,by=c("interval"), all.x=TRUE, sort=FALSE)
+data5$steps<-ifelse(data5$complete, data5$steps.x,data5$steps.y)
+data5$steps.x<-NULL
+data5$steps.y<-NULL
+data5$complete<-NULL
+data5<-arrange(data5, date)
+head(data5)
+```
+4. Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r}
+data51<-aggregate(data$steps,by=list(data$date),sum, na.rm=TRUE)
+colnames(data51)<- c("date","steps")
+hist(data51$steps)
+mean(data51$steps, na.rm=TRUE)
+median(data51$steps, na.rm=TRUE)
+
+```
+The histogram, mean do not differ because we used mean values to impute the missing values. Median could differ in theory.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+(weekdays(data5$date)=="Samedi")| (weekdays(data5$date)=="Dimanche")
